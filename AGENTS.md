@@ -49,9 +49,10 @@ explicit per-repository default-branch overrides.
   and rebase merges. This makes squash the effective default and keeps pull
   request merges linear.
 
-- Use the pull request title for the squash merge commit title. Derive a new
-  pull request's title from its first commit by default; `just pr` implements
-  this workflow with `gh pr create --fill-first`.
+- Use the commit title for a one-commit squash merge and the pull request title
+  when squashing multiple commits. Derive a new pull request's title from its
+  first commit by default; `just pr` implements this workflow with
+  `gh pr create --fill-first`.
 
 - Delete pull request head branches automatically after merging.
 

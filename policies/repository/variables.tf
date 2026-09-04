@@ -71,7 +71,7 @@ variable "allow_squash_merge" {
 variable "squash_merge_commit_title" {
   description = "Default title used for squash merge commits."
   type        = string
-  default     = "PR_TITLE"
+  default     = "COMMIT_OR_PR_TITLE"
 
   validation {
     condition = contains(

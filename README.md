@@ -64,17 +64,17 @@ branch when explicitly requested.
 
 The repository policy defaults are:
 
-| Setting                          | Default     |
-| -------------------------------- | ----------- |
-| Visibility                       | `private`   |
-| Default branch                   | `master`    |
-| Manage repository default branch | disabled    |
-| GitHub Issues                    | enabled     |
-| GitHub Projects                  | disabled    |
-| Wiki                             | disabled    |
-| Pull request merge method        | squash only |
-| Squash merge commit title        | PR title    |
-| Delete branch after merge        | enabled     |
+| Setting                          | Default            |
+| -------------------------------- | ------------------ |
+| Visibility                       | `private`          |
+| Default branch                   | `master`           |
+| Manage repository default branch | disabled           |
+| GitHub Issues                    | enabled            |
+| GitHub Projects                  | disabled           |
+| Wiki                             | disabled           |
+| Pull request merge method        | squash only        |
+| Squash merge commit title        | commit or PR title |
+| Delete branch after merge        | enabled            |
 
 A repository can override any of these defaults in its own module.
 
@@ -362,9 +362,10 @@ disabled, making squash the effective merge default and keeping merges made
 through GitHub pull requests linear. GitHub automatically deletes the pull
 request's head branch after it is merged.
 
-The squash merge commit uses the pull request title. Create a pull request with
-the convenience recipe to derive its initial title and body from the first
-commit:
+For a pull request containing one commit, the squash merge commit uses that
+commit's title. For a pull request containing multiple commits, it uses the pull
+request title. Create a pull request with the convenience recipe to derive its
+initial title and body from the first commit:
 
 ```console
 $ just pr
