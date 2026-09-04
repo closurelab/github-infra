@@ -31,6 +31,16 @@ git-hooks.lib.${pkgs.stdenv.hostPlatform.system}.run {
       enable = true;
     };
 
+    # JSON
+    pretty-format-json = {
+      enable = true;
+      files = "^repos/[^/]+\\.json$";
+      settings = {
+        autofix = true;
+        indent = 2;
+      };
+    };
+
     # Just
     just-format = {
       enable = true;

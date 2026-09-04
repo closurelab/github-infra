@@ -79,8 +79,8 @@ explicit per-repository default-branch overrides.
 - Use `nix develop` for the project toolchain and Git hooks.
 - Run the narrowest relevant check first, then `nix flake check` before
   finishing a change. Stage intended flake inputs before either evaluation.
-- Use the configured hooks to format and validate Nix, Markdown, and OpenTofu
-  files and to lint commit messages.
+- Use the configured hooks to format and validate Nix, Markdown, JSON, and
+  OpenTofu files and to lint commit messages.
 - Commit titles must be at most 72 characters, end in a period, and match
   `^(chore|doc|fix|feat|infra|refac|revert): .+\.$`.
 - Report what passed and anything that could not run.
