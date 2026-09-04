@@ -1,0 +1,364 @@
+# closurelab GitHub infrastructure
+
+This repository is the source of truth for the `closurelab` GitHub
+organization. It uses [OpenTofu](https://opentofu.org/) and the
+[GitHub provider](https://github.com/integrations/terraform-provider-github) to
+declare repositories and their shared settings as code.
+
+The current configuration manages:
+
+- the `github-infra` repository;
+- its standard issue labels;
+- whether GitHub Projects and the wiki are enabled; and
+- its default branch once that branch exists.
+
+OpenTofu is the community-driven infrastructure-as-code tool descended from
+Terraform. You describe the desired result in `.tf` files, OpenTofu compares
+that description with GitHub, and then it shows or applies the difference.
+
+## Project layout
+
+```text
+.
+├── github-org.tf                 # Composes the organization from repo modules
+├── providers.tf                  # Configures the closurelab GitHub provider
+├── versions.tf                   # Pins OpenTofu and provider versions
+├── .terraform.lock.hcl           # Locks the selected provider build
+├── repos/
+│   └── github-infra/
+│       └── main.tf               # Declares the real github-infra repository
+├── policies/
+│   ├── repository/               # Shared repository resource and defaults
+│   ├── labels/                   # Standard label names, descriptions, colors
+│   └── commit-prefixes/          # Checks labels against .gitlint prefixes
+├── nix/
+│   ├── dev-shell.nix             # OpenTofu development environment
+│   └── pre-commit.nix            # Formatting, validation, and lint hooks
+├── flake.nix                     # Nix development shell and checks
+├── .gitlint                      # Allowed commit prefixes
+└── AGENTS.md                     # Rules for automated contributors
+```
+
+The main composition file is `github-org.tf`. It adds each repository module
+under `repos/` to the organization:
+
+```hcl
+module "github_infra" {
+  source = "./repos/github-infra"
+
+  providers = {
+    github = github
+  }
+}
+```
+
+There is no special file that OpenTofu executes first. It loads all `.tf` files
+in the project root as one **root module**. Splitting that module into
+`github-org.tf`, `providers.tf`, and `versions.tf` is for clarity.
+
+Each directory directly under `repos/` represents one real GitHub repository.
+Its `main.tf` calls the shared `policies/repository` module. The shared policy
+creates the repository, applies the standard labels, and manages its default
+branch when requested.
+
+The repository policy defaults are:
+
+| Setting         | Default   |
+| --------------- | --------- |
+| Visibility      | `private` |
+| Default branch  | `master`  |
+| GitHub Projects | disabled  |
+| Wiki            | disabled  |
+
+A repository can override any of these defaults in its own module.
+
+## Important OpenTofu concepts
+
+### Configuration
+
+The tracked `.tf` files describe the desired GitHub configuration. Edit these
+files instead of making the same changes manually in GitHub.
+
+### Plan
+
+`tofu plan` compares the configuration, OpenTofu's state, and the current
+GitHub settings. It previews what would change but does not change GitHub.
+
+The most common plan markers are:
+
+| Marker | Meaning             |
+| ------ | ------------------- |
+| `+`    | create              |
+| `~`    | update in place     |
+| `-`    | destroy             |
+| `-/+`  | destroy and replace |
+
+Read the entire plan, especially any destroy or replacement action.
+
+### Apply
+
+`tofu apply` changes GitHub to match the reviewed plan. Unlike `plan`, this is
+a real infrastructure mutation. Do not run it merely to test configuration.
+
+### State
+
+State records the connection between resources in these files and objects on
+GitHub. This project currently uses local state, stored in
+`terraform.tfstate` after the first apply.
+
+The state file is ignored by Git because it can contain sensitive data. It is
+also essential: do not delete it or run applies from different copies of this
+repository with unrelated state. Configure a shared remote state backend before
+multiple people or automation begin applying changes.
+
+State is different from these generated files:
+
+- `.terraform.lock.hcl` selects a compatible provider build and is committed;
+- `.terraform/` caches initialized modules and providers and is ignored; and
+- `*.tfplan` contains a saved plan and is ignored.
+
+Saved plans and state files can contain sensitive values. Do not share or
+commit them.
+
+## First-time setup
+
+You need Git and [Nix with flakes enabled](https://nixos.wiki/wiki/Flakes).
+The Nix development shell supplies the compatible `tofu` executable, GitHub
+provider, formatters, and Git hooks.
+
+Enter the development shell from the repository root:
+
+```console
+$ nix develop
+```
+
+If you use direnv, the checked-in `.envrc` can enter it automatically:
+
+```console
+$ direnv allow
+```
+
+The development shell installs the repository's pre-commit hooks. It does not
+authenticate you to GitHub.
+
+### Authenticate to GitHub
+
+The provider is configured to manage the `closurelab` organization. Authenticate
+with a GitHub account or app that has enough organization and repository
+permissions for the proposed operations.
+
+If the GitHub CLI is already installed, the provider can use its authenticated
+session:
+
+```console
+$ gh auth login
+$ gh auth status
+```
+
+Alternatively, provide a token through the environment:
+
+```console
+$ export GITHUB_TOKEN="..."
+```
+
+Never put a token in a `.tf` file or commit it to Git.
+
+### Initialize the working directory
+
+Run this after cloning the repository and whenever OpenTofu says the provider,
+module, or backend configuration has changed:
+
+```console
+$ tofu init
+```
+
+Initialization creates the ignored `.terraform/` cache. It is safe to run
+`tofu init` repeatedly.
+
+## Routine workflow
+
+1. Enter the development shell.
+
+   ```console
+   $ nix develop
+   ```
+
+1. Edit the appropriate repository or policy files.
+
+1. Format and validate the OpenTofu configuration.
+
+   ```console
+   $ tofu fmt -recursive
+   $ tofu validate
+   ```
+
+1. Preview the proposed GitHub changes.
+
+   ```console
+   $ tofu plan
+   ```
+
+   Planning is read-only. Check that the organization is `closurelab`, the
+   resource names are correct, and no unexpected resources will be destroyed
+   or replaced.
+
+1. Stage every intended file before evaluating the Nix flake.
+
+   ```console
+   $ git add README.md path/to/changed-file.tf
+   $ nix flake check
+   ```
+
+   Git-backed flakes omit untracked files. Never work around this with a
+   `path:` or `path://` flake URL: doing so can copy large ignored or untracked
+   files into the Nix store.
+
+1. Review and commit the staged diff.
+
+   ```console
+   $ git diff --cached
+   $ git commit -m 'infra: describe the change.'
+   ```
+
+Running a plan is safe and does not require an apply. Stop after the plan when
+you only want to inspect a change.
+
+## Applying a reviewed change
+
+An apply changes the live GitHub organization. Only apply when you intend to
+make the proposed changes and have the correct state file.
+
+For an explicit plan-then-apply workflow:
+
+```console
+$ tofu plan -out=github-infra.tfplan
+$ tofu apply github-infra.tfplan
+```
+
+Passing a saved plan to `tofu apply` is itself approval to execute that exact
+plan, so OpenTofu does not ask for another confirmation. Avoid
+`-auto-approve`, and delete the local plan file when it is no longer needed.
+
+Automated agents may run read-only commands such as `tofu plan`. They must not
+run `apply`, `destroy`, imports, or other state-changing commands without an
+explicit instruction.
+
+## Adding a repository
+
+Suppose the new GitHub repository should be named `example`.
+
+1. Create `repos/example/main.tf`:
+
+   ```hcl
+   terraform {
+     required_providers {
+       github = {
+         source = "integrations/github"
+       }
+     }
+   }
+
+   module "repository" {
+     source = "../../policies/repository"
+
+     name        = "example"
+     description = "What this repository is for."
+
+     providers = {
+       github = github
+     }
+   }
+   ```
+
+1. Compose it from `github-org.tf`:
+
+   ```hcl
+   module "example" {
+     source = "./repos/example"
+
+     providers = {
+       github = github
+     }
+   }
+   ```
+
+1. Run formatting, validation, and `tofu plan`. A normal new-repository plan
+   should propose creations, not changes to unrelated repositories.
+
+The directory name, module name, and `name` value should all clearly correspond
+to the real repository. Only real repositories belong under `repos/`; reusable
+logic belongs under `policies/`.
+
+### Overriding defaults
+
+Set an override in the repository's call to `policies/repository`. For example:
+
+```hcl
+module "repository" {
+  source = "../../policies/repository"
+
+  name         = "example"
+  description  = "A public repository with its wiki enabled."
+  visibility   = "public"
+  has_wiki     = true
+  has_projects = false
+
+  providers = {
+    github = github
+  }
+}
+```
+
+Available inputs are documented in `policies/repository/variables.tf`. Keep an
+override only when the repository intentionally differs from organization
+policy.
+
+### Bootstrapping the default branch
+
+The repository policy does not initialize repositories with a generated
+commit. A new empty repository therefore has no branch for GitHub to mark as
+the default.
+
+For a repository whose contents will be pushed separately:
+
+1. Set `manage_default_branch = false` in its repository module.
+1. Apply once to create the empty GitHub repository and its labels.
+1. Push the local `master` branch to GitHub.
+1. Remove the override, or set `manage_default_branch = true`.
+1. Plan and apply again so OpenTofu manages `master` as the default branch.
+
+The existing `repos/github-infra/main.tf` is currently in this bootstrap state.
+
+## Labels and commit prefixes
+
+The standard labels correspond to the allowed commit prefixes in `.gitlint`:
+`chore`, `doc`, `fix`, `feat`, `infra`, `refac`, and `revert`.
+
+`policies/labels` defines their descriptions and color-blind-friendly colors.
+`policies/commit-prefixes` checks that those label names remain synchronized
+with `.gitlint`. The repository policy manages this set authoritatively, so a
+plan may remove unmanaged labels from a managed repository.
+
+When adding or renaming a prefix, update both `.gitlint` and
+`policies/labels/main.tf`, then inspect the plan carefully.
+
+## Useful commands
+
+| Command               | Purpose                              | Changes GitHub? |
+| --------------------- | ------------------------------------ | --------------- |
+| `tofu fmt -recursive` | Format all OpenTofu files            | No              |
+| `tofu validate`       | Check configuration structure        | No              |
+| `tofu plan`           | Preview drift and proposed changes   | No              |
+| `tofu show`           | Inspect current state                | No              |
+| `tofu state list`     | List state-managed resources         | No              |
+| `tofu apply`          | Apply proposed changes               | **Yes**         |
+| `tofu destroy`        | Propose and remove managed resources | **Yes**         |
+| `nix flake check`     | Run all repository checks            | No              |
+
+Use `tofu destroy` with extreme care: for this project it can delete GitHub
+repositories and their contents.
+
+For more detail, see the official OpenTofu documentation for
+[`init`](https://opentofu.org/docs/cli/init/),
+[`plan`](https://opentofu.org/docs/cli/commands/plan/), and
+[`apply`](https://opentofu.org/docs/cli/commands/apply/).
