@@ -64,13 +64,15 @@ branch when explicitly requested.
 
 The repository policy defaults are:
 
-| Setting                          | Default   |
-| -------------------------------- | --------- |
-| Visibility                       | `private` |
-| Default branch                   | `master`  |
-| Manage repository default branch | disabled  |
-| GitHub Projects                  | disabled  |
-| Wiki                             | disabled  |
+| Setting                          | Default     |
+| -------------------------------- | ----------- |
+| Visibility                       | `private`   |
+| Default branch                   | `master`    |
+| Manage repository default branch | disabled    |
+| GitHub Projects                  | disabled    |
+| Wiki                             | disabled    |
+| Pull request merge method        | squash only |
+| Delete branch after merge        | enabled     |
 
 A repository can override any of these defaults in its own module.
 
@@ -349,6 +351,22 @@ module "repository" {
 Available inputs are documented in `policies/repository/variables.tf`. Keep an
 override only when the repository intentionally differs from organization
 policy.
+
+### Pull request merge policy
+
+Repositories permit squash merges only. Merge commits and rebase merges are
+disabled, making squash the effective merge default and keeping merges made
+through GitHub pull requests linear. GitHub automatically deletes the pull
+request's head branch after it is merged.
+
+Each setting can be overridden for an exceptional repository with
+`allow_merge_commit`, `allow_rebase_merge`, `allow_squash_merge`, or
+`delete_branch_on_merge`.
+
+This repository-level policy controls GitHub's pull request merge methods. It
+does not prevent someone with direct push access from pushing a locally created
+merge commit; strict enforcement against direct pushes requires a branch rule
+that requires linear history.
 
 ### Default branch policy
 

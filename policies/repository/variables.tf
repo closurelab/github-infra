@@ -43,3 +43,27 @@ variable "has_wiki" {
   type        = bool
   default     = false
 }
+
+variable "allow_merge_commit" {
+  description = "Whether pull requests may create merge commits."
+  type        = bool
+  default     = false
+}
+
+variable "allow_rebase_merge" {
+  description = "Whether pull requests may use rebase merging."
+  type        = bool
+  default     = false
+}
+
+variable "allow_squash_merge" {
+  description = "Whether pull requests may use squash merging."
+  type        = bool
+  default     = true
+}
+
+variable "delete_branch_on_merge" {
+  description = "Whether head branches are deleted after pull requests merge."
+  type        = bool
+  default     = true
+}

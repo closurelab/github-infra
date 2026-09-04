@@ -43,6 +43,12 @@ explicit per-repository default-branch overrides.
 - Disable GitHub Projects and the wiki by default. Declare any exception
   explicitly in the repository configuration.
 
+- Permit squash merging only: enable squash merges and disable merge commits
+  and rebase merges. This makes squash the effective default and keeps pull
+  request merges linear.
+
+- Delete pull request head branches automatically after merging.
+
 - The allowed commit prefixes in `.gitlint` are the source of truth for the
   standard repository labels. Manage that label set authoritatively.
 
