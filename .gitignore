@@ -1,0 +1,7 @@
+# Tooling
+/.cache
+/.direnv
+/.pre-commit-config.yaml
+
+# OpenTofu
+.terraform/
