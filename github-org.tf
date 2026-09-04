@@ -11,3 +11,11 @@ module "github_infra" {
     github = github
   }
 }
+
+module "logo" {
+  source = "./repos/logo"
+
+  providers = {
+    github = github
+  }
+}

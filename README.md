@@ -7,8 +7,8 @@ declare repositories and their shared settings as code.
 
 The current configuration manages:
 
-- the public `github-infra` repository;
-- its standard issue labels;
+- the public `github-infra` and `logo` repositories;
+- their standard issue labels;
 - whether GitHub Projects and the wiki are enabled; and
 - optionally, its default branch when explicitly enabled.
 
@@ -26,8 +26,10 @@ that description with GitHub, and then it shows or applies the difference.
 ├── .terraform.lock.hcl           # Locks the selected provider build
 ├── Justfile                      # Short, documented operator commands
 ├── repos/
-│   └── github-infra/
-│       └── main.tf               # Declares the real github-infra repository
+│   ├── github-infra/
+│   │   └── main.tf               # Declares the github-infra repository
+│   └── logo/
+│       └── main.tf               # Declares the logo repository
 ├── policies/
 │   ├── repository/               # Shared repository resource and defaults
 │   ├── labels/                   # Standard label names, descriptions, colors
@@ -401,6 +403,14 @@ manage_default_branch = true
 
 GitHub cannot select a branch that does not exist. Create or push the branch
 before enabling this override.
+
+## Organization avatar
+
+The pinned GitHub provider cannot manage the closurelab organization avatar.
+Its `github_organization_settings` resource has no avatar or logo argument, and
+GitHub's organization update API does not accept one. The generated logo can be
+stored in the `logo` repository, but uploading it as the organization avatar
+remains a manual GitHub organization setting.
 
 ## Labels and commit prefixes
 
