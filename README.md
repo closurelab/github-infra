@@ -10,7 +10,7 @@ The current configuration manages:
 - the `github-infra` repository;
 - its standard issue labels;
 - whether GitHub Projects and the wiki are enabled; and
-- its default branch once that branch exists.
+- optionally, its default branch when explicitly enabled.
 
 OpenTofu is the community-driven infrastructure-as-code tool descended from
 Terraform. You describe the desired result in `.tf` files, OpenTofu compares
@@ -24,6 +24,7 @@ that description with GitHub, and then it shows or applies the difference.
 ├── providers.tf                  # Configures the closurelab GitHub provider
 ├── versions.tf                   # Pins OpenTofu and provider versions
 ├── .terraform.lock.hcl           # Locks the selected provider build
+├── Justfile                      # Short, documented operator commands
 ├── repos/
 │   └── github-infra/
 │       └── main.tf               # Declares the real github-infra repository
@@ -58,17 +59,18 @@ in the project root as one **root module**. Splitting that module into
 
 Each directory directly under `repos/` represents one real GitHub repository.
 Its `main.tf` calls the shared `policies/repository` module. The shared policy
-creates the repository, applies the standard labels, and manages its default
-branch when requested.
+creates the repository, applies the standard labels, and can manage its default
+branch when explicitly requested.
 
 The repository policy defaults are:
 
-| Setting         | Default   |
-| --------------- | --------- |
-| Visibility      | `private` |
-| Default branch  | `master`  |
-| GitHub Projects | disabled  |
-| Wiki            | disabled  |
+| Setting                          | Default   |
+| -------------------------------- | --------- |
+| Visibility                       | `private` |
+| Default branch                   | `master`  |
+| Manage repository default branch | disabled  |
+| GitHub Projects                  | disabled  |
+| Wiki                             | disabled  |
 
 A repository can override any of these defaults in its own module.
 
@@ -124,7 +126,7 @@ commit them.
 
 You need Git and [Nix with flakes enabled](https://nixos.wiki/wiki/Flakes).
 The Nix development shell supplies the compatible `tofu` executable, GitHub
-provider, formatters, and Git hooks.
+provider, GitHub CLI (`gh`), command runner (`just`), formatters, and Git hooks.
 
 Enter the development shell from the repository root:
 
@@ -147,8 +149,8 @@ The provider is configured to manage the `closurelab` organization. Authenticate
 with a GitHub account or app that has enough organization and repository
 permissions for the proposed operations.
 
-If the GitHub CLI is already installed, the provider can use its authenticated
-session:
+The development shell includes the GitHub CLI, and the provider can use its
+authenticated session:
 
 ```console
 $ gh auth login
@@ -174,6 +176,41 @@ $ tofu init
 
 Initialization creates the ignored `.terraform/` cache. It is safe to run
 `tofu init` repeatedly.
+
+Run `just` to list the project-specific convenience commands:
+
+```console
+$ just
+Available recipes:
+    default
+    import $repository # Import an existing repository and its authoritative labels into OpenTofu state.
+```
+
+## Importing an existing repository
+
+Import binds an existing GitHub object to its address in OpenTofu state. It
+does not create or modify the GitHub repository, but it does change the state.
+
+The `just import` recipe imports both the repository and its authoritative label
+set. For example:
+
+```console
+$ just import github-infra
+```
+
+The recipe expects `repos/github-infra/main.tf` to exist and maps the repository
+name `github-infra` to the root module name `github_infra`. It safely skips each
+resource that is already present in state, so it can resume a partial import.
+
+After importing, always inspect the proposed reconciliation:
+
+```console
+$ tofu state list
+$ tofu plan
+```
+
+Do not apply until every proposed change is understood. In particular, the
+label resource is authoritative and may propose removing unmanaged labels.
 
 ## Routine workflow
 
@@ -313,21 +350,24 @@ Available inputs are documented in `policies/repository/variables.tf`. Keep an
 override only when the repository intentionally differs from organization
 policy.
 
-### Bootstrapping the default branch
+### Default branch policy
 
-The repository policy does not initialize repositories with a generated
-commit. A new empty repository therefore has no branch for GitHub to mark as
-the default.
+The organization-wide default branch for newly created repositories has been
+manually set to `master`. The GitHub provider can read that organization
+setting, but cannot manage it declaratively.
 
-For a repository whose contents will be pushed separately:
+Repository-level default-branch management is therefore disabled by default.
+New repositories inherit the organization setting when their first branch is
+created. To make an explicit exception for an existing repository and branch,
+set these inputs in its repository module:
 
-1. Set `manage_default_branch = false` in its repository module.
-1. Apply once to create the empty GitHub repository and its labels.
-1. Push the local `master` branch to GitHub.
-1. Remove the override, or set `manage_default_branch = true`.
-1. Plan and apply again so OpenTofu manages `master` as the default branch.
+```hcl
+default_branch        = "some-existing-branch"
+manage_default_branch = true
+```
 
-The existing `repos/github-infra/main.tf` is currently in this bootstrap state.
+GitHub cannot select a branch that does not exist. Create or push the branch
+before enabling this override.
 
 ## Labels and commit prefixes
 
@@ -351,6 +391,7 @@ When adding or renaming a prefix, update both `.gitlint` and
 | `tofu plan`           | Preview drift and proposed changes   | No              |
 | `tofu show`           | Inspect current state                | No              |
 | `tofu state list`     | List state-managed resources         | No              |
+| `just import <repo>`  | Import a repository and its labels   | State only      |
 | `tofu apply`          | Apply proposed changes               | **Yes**         |
 | `tofu destroy`        | Propose and remove managed resources | **Yes**         |
 | `nix flake check`     | Run all repository checks            | No              |

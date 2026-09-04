@@ -31,6 +31,14 @@ git-hooks.lib.${pkgs.stdenv.hostPlatform.system}.run {
       enable = true;
     };
 
+    # Just
+    just-format = {
+      enable = true;
+      entry = "${pkgs.just}/bin/just --fmt --check";
+      files = "(^|/)Justfile$";
+      pass_filenames = false;
+    };
+
     # OpenTofu/HCL
     terraform-format = {
       enable = true;

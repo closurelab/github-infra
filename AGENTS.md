@@ -5,8 +5,8 @@
 `github-infra` is the source of truth for declaratively managing the
 `closurelab` GitHub organization with OpenTofu and the GitHub provider.
 
-The current scope is the organization's repositories, their labels, and each
-repository's default branch.
+The current scope is the organization's repositories, their labels, and
+explicit per-repository default-branch overrides.
 
 ## Nix workflow
 
@@ -23,8 +23,8 @@ repository's default branch.
 - Use `tofu`, not `terraform`, for all infrastructure commands.
 - Declare managed GitHub settings in OpenTofu. Do not make equivalent ad hoc
   changes with the GitHub UI, `gh`, or direct API calls.
-- Keep repository resources, labels, and default branches in the declarative
-  configuration.
+- Keep repository resources, labels, and any explicit default-branch overrides
+  in the declarative configuration.
 - Agents may run read-only OpenTofu commands, including `tofu plan`, without
   confirmation.
 - Never run `tofu apply`, `tofu destroy`, `tofu import`, state-changing
@@ -33,7 +33,12 @@ repository's default branch.
 
 ## Repository defaults
 
-- Use `master` as the default branch of every managed repository.
+- The organization-wide default branch for new repositories is manually set to
+  `master`. The GitHub provider cannot manage that organization setting.
+
+- Do not manage a repository's default branch by default. Set
+  `manage_default_branch = true` only when an explicit per-repository override
+  is required and the target branch already exists.
 
 - Disable GitHub Projects and the wiki by default. Declare any exception
   explicitly in the repository configuration.

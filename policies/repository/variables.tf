@@ -27,9 +27,9 @@ variable "default_branch" {
 }
 
 variable "manage_default_branch" {
-  description = "Whether OpenTofu should manage the existing default branch."
+  description = "Whether OpenTofu should manage this repository's existing default branch."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "has_projects" {

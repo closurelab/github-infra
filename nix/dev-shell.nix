@@ -13,7 +13,12 @@ in
 pkgs.mkShell {
   name = "github-infra-dev";
 
-  packages = [ tofu ] ++ preCommit.enabledPackages;
+  packages = [
+    tofu
+    pkgs.gh
+    pkgs.just
+  ]
+  ++ preCommit.enabledPackages;
 
   inherit (preCommit) shellHook;
 }
