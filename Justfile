@@ -15,15 +15,13 @@ import $repository:
       exit 2
     fi
 
-    if [[ ! -f "repos/$repository/main.tf" ]]; then
-      echo "No repository module found at repos/$repository/main.tf" >&2
+    if [[ ! -f "repos/$repository.json" ]]; then
+      echo "No repository descriptor found at repos/$repository.json" >&2
       exit 2
     fi
 
-    module_name="${repository//-/_}"
-    module_name="${module_name//./_}"
-    repository_address="module.$module_name.module.repository.github_repository.this"
-    labels_address="module.$module_name.module.repository.github_issue_labels.this"
+    repository_address="module.repositories[\"$repository\"].github_repository.this"
+    labels_address="module.repositories[\"$repository\"].github_issue_labels.this"
 
     import_if_missing() {
       local address="$1"

@@ -1,0 +1,4 @@
+{
+  "description": "Self-referential Common Lisp logo generator for closurelab.",
+  "visibility": "public"
+}

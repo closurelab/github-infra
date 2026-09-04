@@ -10,7 +10,7 @@ The current configuration manages:
 - the public `github-infra` and `logo` repositories;
 - their standard issue labels;
 - whether GitHub Projects and the wiki are enabled; and
-- optionally, its default branch when explicitly enabled.
+- optionally, their default branches when explicitly enabled.
 
 OpenTofu is the community-driven infrastructure-as-code tool descended from
 Terraform. You describe the desired result in `.tf` files, OpenTofu compares
@@ -20,16 +20,14 @@ that description with GitHub, and then it shows or applies the difference.
 
 ```text
 .
-├── github-org.tf                 # Composes the organization from repo modules
+├── github-org.tf                 # Discovers descriptors and applies policy
 ├── providers.tf                  # Configures the closurelab GitHub provider
 ├── versions.tf                   # Pins OpenTofu and provider versions
 ├── .terraform.lock.hcl           # Locks the selected provider build
 ├── Justfile                      # Short, documented operator commands
 ├── repos/
-│   ├── github-infra/
-│   │   └── main.tf               # Declares the github-infra repository
-│   └── logo/
-│       └── main.tf               # Declares the logo repository
+│   ├── github-infra.json          # Configures the github-infra repository
+│   └── logo.json                  # Configures the logo repository
 ├── policies/
 │   ├── repository/               # Shared repository resource and defaults
 │   ├── labels/                   # Standard label names, descriptions, colors
@@ -42,16 +40,18 @@ that description with GitHub, and then it shows or applies the difference.
 └── AGENTS.md                     # Rules for automated contributors
 ```
 
-The main composition file is `github-org.tf`. It adds each repository module
-under `repos/` to the organization:
+The main composition file is `github-org.tf`. It discovers every descriptor
+matching `repos/*.json` and creates one shared-policy module instance for each
+file:
 
 ```hcl
-module "github_infra" {
-  source = "./repos/github-infra"
+locals {
+  repository_files = fileset("${path.module}/repos", "*.json")
+}
 
-  providers = {
-    github = github
-  }
+module "repositories" {
+  source   = "./policies/repository"
+  for_each = local.repositories
 }
 ```
 
@@ -59,10 +59,11 @@ There is no special file that OpenTofu executes first. It loads all `.tf` files
 in the project root as one **root module**. Splitting that module into
 `github-org.tf`, `providers.tf`, and `versions.tf` is for clarity.
 
-Each directory directly under `repos/` represents one real GitHub repository.
-Its `main.tf` calls the shared `policies/repository` module. The shared policy
-creates the repository, applies the standard labels, and can manage its default
-branch when explicitly requested.
+Each JSON file directly under `repos/` represents one real GitHub repository;
+the filename stem becomes the repository name. The file contains only settings
+that differ from the defaults. The shared policy creates the repository,
+applies the standard labels, and can manage its default branch when explicitly
+requested.
 
 The repository policy defaults are:
 
@@ -78,7 +79,7 @@ The repository policy defaults are:
 | Squash merge commit title        | commit or PR title |
 | Delete branch after merge        | enabled            |
 
-A repository can override any of these defaults in its own module.
+A repository can override any of these defaults in its JSON descriptor.
 
 ## Important OpenTofu concepts
 
@@ -205,8 +206,8 @@ set. For example:
 $ just import github-infra
 ```
 
-The recipe expects `repos/github-infra/main.tf` to exist and maps the repository
-name `github-infra` to the root module name `github_infra`. It safely skips each
+The recipe expects `repos/github-infra.json` to exist and addresses the
+`github-infra` instance of the shared repository module. It safely skips each
 resource that is already present in state, so it can resume a partial import.
 
 After importing, always inspect the proposed reconciliation:
@@ -291,65 +292,31 @@ explicit instruction.
 
 Suppose the new GitHub repository should be named `example`.
 
-1. Create `repos/example/main.tf`:
+1. Create `repos/example.json`:
 
-   ```hcl
-   terraform {
-     required_providers {
-       github = {
-         source = "integrations/github"
-       }
-     }
-   }
-
-   module "repository" {
-     source = "../../policies/repository"
-
-     name        = "example"
-     description = "What this repository is for."
-
-     providers = {
-       github = github
-     }
-   }
-   ```
-
-1. Compose it from `github-org.tf`:
-
-   ```hcl
-   module "example" {
-     source = "./repos/example"
-
-     providers = {
-       github = github
-     }
+   ```json
+   {
+     "description": "What this repository is for."
    }
    ```
 
 1. Run formatting, validation, and `tofu plan`. A normal new-repository plan
    should propose creations, not changes to unrelated repositories.
 
-The directory name, module name, and `name` value should all clearly correspond
-to the real repository. Only real repositories belong under `repos/`; reusable
-logic belongs under `policies/`.
+No root-module edit is needed: `fileset` discovers the descriptor automatically.
+The filename stem must exactly match the real repository name. Only real
+repositories belong under `repos/`; reusable logic belongs under `policies/`.
 
 ### Overriding defaults
 
-Set an override in the repository's call to `policies/repository`. For example:
+Set an override in the repository's JSON descriptor. For example:
 
-```hcl
-module "repository" {
-  source = "../../policies/repository"
-
-  name         = "example"
-  description  = "A public repository with its wiki enabled."
-  visibility   = "public"
-  has_wiki     = true
-  has_projects = false
-
-  providers = {
-    github = github
-  }
+```json
+{
+  "description": "A public repository with its wiki enabled.",
+  "has_projects": false,
+  "has_wiki": true,
+  "visibility": "public"
 }
 ```
 
@@ -394,11 +361,13 @@ setting, but cannot manage it declaratively.
 Repository-level default-branch management is therefore disabled by default.
 New repositories inherit the organization setting when their first branch is
 created. To make an explicit exception for an existing repository and branch,
-set these inputs in its repository module:
+set these fields in its JSON descriptor:
 
-```hcl
-default_branch        = "some-existing-branch"
-manage_default_branch = true
+```json
+{
+  "default_branch": "some-existing-branch",
+  "manage_default_branch": true
+}
 ```
 
 GitHub cannot select a branch that does not exist. Create or push the branch

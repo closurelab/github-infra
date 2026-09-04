@@ -25,6 +25,8 @@ explicit per-repository default-branch overrides.
   changes with the GitHub UI, `gh`, or direct API calls.
 - Keep repository resources, labels, and any explicit default-branch overrides
   in the declarative configuration.
+- Declare each repository in `repos/<name>.json`; the filename stem is the
+  GitHub repository name. Do not compose repository modules manually.
 - Agents may run read-only OpenTofu commands, including `tofu plan`, without
   confirmation.
 - Never run `tofu apply`, `tofu destroy`, `tofu import`, state-changing

@@ -4,16 +4,23 @@ module "commit_prefixes" {
   gitlint = file("${path.module}/.gitlint")
 }
 
-module "github_infra" {
-  source = "./repos/github-infra"
+locals {
+  repository_files = fileset("${path.module}/repos", "*.json")
 
-  providers = {
-    github = github
+  repositories = {
+    for repository_file in local.repository_files :
+    trimsuffix(repository_file, ".json") => jsondecode(
+      file("${path.module}/repos/${repository_file}"),
+    )
   }
 }
 
-module "logo" {
-  source = "./repos/logo"
+module "repositories" {
+  source   = "./policies/repository"
+  for_each = local.repositories
+
+  name     = each.key
+  settings = each.value
 
   providers = {
     github = github
