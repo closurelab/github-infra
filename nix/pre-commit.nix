@@ -5,6 +5,9 @@
 
 { pkgs }:
 
+let
+  tofu = pkgs.opentofu.withPlugins (providers: [ providers.integrations_github ]);
+in
 git-hooks.lib.${pkgs.stdenv.hostPlatform.system}.run {
   inherit src;
 
@@ -32,7 +35,11 @@ git-hooks.lib.${pkgs.stdenv.hostPlatform.system}.run {
     terraform-format = {
       enable = true;
       files = "\\.tf(vars)?$";
+      package = tofu;
     };
-    terraform-validate.enable = true;
+    terraform-validate = {
+      enable = true;
+      package = tofu;
+    };
   };
 }

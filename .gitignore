@@ -5,3 +5,10 @@
 
 # OpenTofu
 .terraform/
+.terraform.lock.hcl
+!/.terraform.lock.hcl
+*.tfplan
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
