@@ -11,6 +11,7 @@ module "repository" {
 
   name        = "github-infra"
   description = "Declarative GitHub organization infrastructure for closurelab."
+  visibility  = "public"
 
   providers = {
     github = github

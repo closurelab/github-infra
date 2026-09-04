@@ -1,6 +1,10 @@
 default:
     @just --list
 
+# Create a pull request using the first commit for its title and body.
+pr:
+    gh pr create --fill-first
+
 # Import an existing repository and its authoritative labels into OpenTofu state.
 import $repository:
     #!/usr/bin/env bash

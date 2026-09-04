@@ -7,7 +7,7 @@ declare repositories and their shared settings as code.
 
 The current configuration manages:
 
-- the `github-infra` repository;
+- the public `github-infra` repository;
 - its standard issue labels;
 - whether GitHub Projects and the wiki are enabled; and
 - optionally, its default branch when explicitly enabled.
@@ -69,9 +69,11 @@ The repository policy defaults are:
 | Visibility                       | `private`   |
 | Default branch                   | `master`    |
 | Manage repository default branch | disabled    |
+| GitHub Issues                    | enabled     |
 | GitHub Projects                  | disabled    |
 | Wiki                             | disabled    |
 | Pull request merge method        | squash only |
+| Squash merge commit title        | PR title    |
 | Delete branch after merge        | enabled     |
 
 A repository can override any of these defaults in its own module.
@@ -186,6 +188,7 @@ $ just
 Available recipes:
     default
     import $repository # Import an existing repository and its authoritative labels into OpenTofu state.
+    pr                 # Create a pull request using the first commit for its title and body.
 ```
 
 ## Importing an existing repository
@@ -359,6 +362,17 @@ disabled, making squash the effective merge default and keeping merges made
 through GitHub pull requests linear. GitHub automatically deletes the pull
 request's head branch after it is merged.
 
+The squash merge commit uses the pull request title. Create a pull request with
+the convenience recipe to derive its initial title and body from the first
+commit:
+
+```console
+$ just pr
+```
+
+The GitHub CLI opens its normal interactive flow, so review the generated title
+before creating the pull request.
+
 Each setting can be overridden for an exceptional repository with
 `allow_merge_commit`, `allow_rebase_merge`, `allow_squash_merge`, or
 `delete_branch_on_merge`.
@@ -410,6 +424,7 @@ When adding or renaming a prefix, update both `.gitlint` and
 | `tofu show`           | Inspect current state                | No              |
 | `tofu state list`     | List state-managed resources         | No              |
 | `just import <repo>`  | Import a repository and its labels   | State only      |
+| `just pr`             | Create a PR from the first commit    | **Yes**         |
 | `tofu apply`          | Apply proposed changes               | **Yes**         |
 | `tofu destroy`        | Propose and remove managed resources | **Yes**         |
 | `nix flake check`     | Run all repository checks            | No              |

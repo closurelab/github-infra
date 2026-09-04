@@ -43,9 +43,15 @@ explicit per-repository default-branch overrides.
 - Disable GitHub Projects and the wiki by default. Declare any exception
   explicitly in the repository configuration.
 
+- Enable GitHub Issues by default.
+
 - Permit squash merging only: enable squash merges and disable merge commits
   and rebase merges. This makes squash the effective default and keeps pull
   request merges linear.
+
+- Use the pull request title for the squash merge commit title. Derive a new
+  pull request's title from its first commit by default; `just pr` implements
+  this workflow with `gh pr create --fill-first`.
 
 - Delete pull request head branches automatically after merging.
 
