@@ -1,0 +1,4 @@
+{
+  "description": "A typed configuration registry with equivalent C++, Python, and Rust APIs.",
+  "visibility": "private"
+}
