@@ -2,6 +2,7 @@
 /.cache
 /.direnv
 /.pre-commit-config.yaml
+.DS_Store
 
 # OpenTofu
 .terraform/
