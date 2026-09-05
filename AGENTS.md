@@ -83,4 +83,7 @@ explicit per-repository default-branch overrides.
   OpenTofu files and to lint commit messages.
 - Commit titles must be at most 72 characters, end in a period, and match
   `^(chore|doc|fix|feat|infra|refac|revert): .+\.$`.
+- Start the text after the commit prefix with a lowercase word unless that
+  word requires capitalization, such as a proper noun or acronym. For example,
+  use `infra: declare repositories.`, not `infra: Declare repositories.`.
 - Report what passed and anything that could not run.

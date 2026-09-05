@@ -1,0 +1,4 @@
+{
+  "description": "Experiments with Nix builds using a CentOS 7 binary sysroot and GCC 6.",
+  "visibility": "private"
+}

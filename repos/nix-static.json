@@ -1,0 +1,4 @@
+{
+  "description": "Static builds of Nix, curl, and patchelf for x86_64 Linux.",
+  "visibility": "public"
+}
